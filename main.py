@@ -80,7 +80,7 @@ def parse_listing(html: HTMLParser) -> dict:
     listing = Listing(
         name=extract_text(html, 'h1#propertyName'),
         address=address,
-        zipcode=zipcode
+        zipcode=zipcode,
         neighborhood=extract_text(html, 'a.neighborhood'),
         phone_number=extract_text(html, 'div.phoneNumber span'),
         rent_range=extract_text(html, 'p.rentInfoDetail'),
