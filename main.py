@@ -19,6 +19,7 @@ class Listing:
     walk_score: int
     bike_score: int
     transit_score: int
+    fees_and_policies: dict
 
 
 def get_html(url: str, **kwargs) -> HTMLParser:
@@ -73,8 +74,49 @@ def get_listing_address(html: HTMLParser) -> list[str]:
     return [address, zipcode]
 
 
+def get_fees_and_policies(html: HTMLParser) -> dict:
+    # returns dict of dict of dict of dict...
+    fees_and_policies = {}
+
+    tabs = {
+        'required_fees': 'div#fees-policies-required-fees-tab',
+        'pets': 'div#fees-policies-pets-tab',
+        'parking': 'div#fees-policies-parking-tab',
+        'storage': 'div#fees-policies-storage-tab'
+    }
+
+    for tab in tabs:
+        try:
+            category = html.css_first(tabs[tab])
+        except:
+            category = None
+
+        if category:
+            fees_and_policies[tab] = {}
+
+            sections = category.css('div.feespolicies')
+            for section in sections:
+                section_name = extract_text(section, 'h4.header-column')
+
+                fees_and_policies[tab][section_name] = {}
+
+                fees = section.css('ul li:nth-child(n+2)')
+                for fee in fees:
+                    fee_name = extract_text(fee, 'div.feeName')
+
+                    if fee_name == 'Requirements:':
+                        requirements = extract_text(fee, 'div.subTitle')
+                        fees_and_policies[tab][section_name]['Requirements'] = requirements
+                    elif fee_name:
+                        fee_amount = extract_text(fee, 'div.column-right')
+                        fees_and_policies[tab][section_name][fee_name] = fee_amount
+
+    return fees_and_policies
+
+
 def parse_listing(html: HTMLParser) -> dict:
 
+    fees_and_policies = get_fees_and_policies(html)
     address, zipcode = get_listing_address(html)
 
     listing = Listing(
@@ -87,6 +129,7 @@ def parse_listing(html: HTMLParser) -> dict:
         walk_score=int(extract_text(html, 'div#walkScoreValue')),
         bike_score=int(extract_text(html, 'div.bikeScore div.score')),
         transit_score=int(extract_text(html, 'div.transitScore div.score')),
+        fees_and_policies=fees_and_policies
     )
     return asdict(listing)
 
