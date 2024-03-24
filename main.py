@@ -72,9 +72,9 @@ def parse_listing(html: HTMLParser):
         neighborhood=extract_text(html, 'a.neighborhood'),
         phone_number=extract_text(html, 'div.phoneNumber span'),
         rent_range=extract_text(html, 'p.rentInfoDetail'),
-        walk_score=extract_text(html, 'div#walkScoreValue'),
-        bike_score=extract_text(html, 'div.bikeScore div.score'),
-        transit_score=extract_text(html, 'div.transitScore div.score'),
+        walk_score=int(extract_text(html, 'div#walkScoreValue')),
+        bike_score=int(extract_text(html, 'div.bikeScore div.score')),
+        transit_score=int(extract_text(html, 'div.transitScore div.score')),
     )
     return asdict(listing)
 
