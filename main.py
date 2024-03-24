@@ -11,6 +11,8 @@ STATE = 'mn'
 @dataclass
 class Listing:
     name: str
+    address: str
+    zipcode: str
     neighborhood: str
     phone_number: str
     rent_range: str
@@ -46,7 +48,6 @@ def parse_search_page(html: HTMLParser):
     # yields listing urls
     listings = html.css('section#placards ul li.mortar-wrapper')
     for listing in listings:
-
         try:
             company = listing.css_first('div.property-logo').attributes['aria-label']
         except:
@@ -58,17 +59,28 @@ def parse_search_page(html: HTMLParser):
         }
 
 
-def extract_text(html, sel) -> str:
+def extract_text(html: HTMLParser, sel: str) -> str | None:
     try:
         return html.css_first(sel).text(strip=True)
     except:
         return None
 
 
-def parse_listing(html: HTMLParser):
+def get_listing_address(html: HTMLParser) -> list[str]:
+    address = extract_text(html, 'div.propertyAddressContainer span.delivery-address')
+    address = address.replace(',','')
+    zipcode = extract_text(html, 'div.propertyAddressContainer span.stateZipContainer span:nth-child(2)')
+    return [address, zipcode]
+
+
+def parse_listing(html: HTMLParser) -> dict:
+
+    address, zipcode = get_listing_address(html)
 
     listing = Listing(
         name=extract_text(html, 'h1#propertyName'),
+        address=address,
+        zipcode=zipcode
         neighborhood=extract_text(html, 'a.neighborhood'),
         phone_number=extract_text(html, 'div.phoneNumber span'),
         rent_range=extract_text(html, 'p.rentInfoDetail'),
