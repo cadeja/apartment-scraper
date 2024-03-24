@@ -32,7 +32,7 @@ def get_html(url: str, **kwargs) -> HTMLParser:
     if page:
         try:
             resp = httpx.get(url + str(page), headers=headers, follow_redirects=True)
-            print(resp.status_code)
+            print(f'Status: {resp.status_code}')
         except httpx.HTTPError as err:
             print(err)
     else:
@@ -202,18 +202,20 @@ def main():
 
     # for x in range(1, num_pages + 1):
     for x in range(1, 2):
+        print(f'Grabbing page {x}...')
         html = get_html(baseurl, page=x)
 
         # gets url AND company. Company is not easy to get on actual listing
         listings = parse_search_page(html)
 
         for listing in listings:
-            print("got data")
             html = get_html(listing.get("url"))
             data = parse_listing(html)
             data["company"] = listing.get("company")
 
             apartment_list.append(data)
+            print(f'Added apartment listing: {data["name"]}')
+
             time.sleep(0.2)
 
     export_to_json(apartment_list)
