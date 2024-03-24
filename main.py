@@ -2,6 +2,7 @@ import httpx
 from selectolax.parser import HTMLParser
 import time
 from dataclasses import dataclass, asdict
+import json
 
 ## SEARCH VARIABLES
 CITY = 'minneapolis'
@@ -104,7 +105,7 @@ def get_fees_and_policies(html: HTMLParser) -> dict:
                 for fee in fees:
                     fee_name = extract_text(fee, 'div.feeName')
 
-                    if fee_name == 'Requirements:':
+                    if fee_name == 'Requirements:': # for pet section
                         requirements = extract_text(fee, 'div.subTitle')
                         fees_and_policies[tab][section_name]['Requirements'] = requirements
                     elif fee_name:
@@ -134,13 +135,20 @@ def parse_listing(html: HTMLParser) -> dict:
     return asdict(listing)
 
 
+def export_to_json(listings):
+    with open('listings.json','w', encoding='utf-8') as f:
+        json.dump(listings, f, ensure_ascii=False, indent=4)
+
+
+
 def main():
-    
+    apartment_list = []
     baseurl = f'https://www.apartments.com/apartments/{CITY}-{STATE}/max-1-bedrooms/'
 
     num_pages = get_num_of_pages(get_html(baseurl))
 
-    for x in range(1, num_pages + 1):
+    #for x in range(1, num_pages + 1):
+    for x in range(1,2):
         html = get_html(baseurl, page=x)
     
         # gets url AND company. Company is not easy to get on actual listing
@@ -150,8 +158,12 @@ def main():
             html = get_html(listing.get('url'))
             data = parse_listing(html)
             data['company'] = listing.get('company')
-            print(data)
+
+            apartment_list.append(data)
             time.sleep(.5)
+
+    export_to_json(apartment_list)
+
 
 if __name__ == '__main__':
     main()
