@@ -21,6 +21,7 @@ class Listing:
     bike_score: int
     transit_score: int
     fees_and_policies: dict
+    models: dict
 
 
 def get_html(url: str, **kwargs) -> HTMLParser:
@@ -115,8 +116,53 @@ def get_fees_and_policies(html: HTMLParser) -> dict:
     return fees_and_policies
 
 
+def clean_models(beds, baths):
+    if beds == 'Studio':
+        beds = 0
+    else:
+        beds = beds.split(' ')[0]
+        baths = baths.split(' ')[0]
+
+    return [beds, baths]
+
+
+def get_models(html: HTMLParser) -> dict:
+    models_dict = {}
+    models = html.css('div.pricingGridItem')
+    for model in models:
+        model_name = extract_text(model,'span.modelName')
+        beds = extract_text(model, 'span.detailsTextWrapper span:nth-child(1)')
+        baths = extract_text(model, 'span.detailsTextWrapper span:nth-child(2)')
+        # sqft = extract_text(model, 'span.detailsTextWrapper span:nth-child(3)')
+
+        [beds, baths] = clean_models(beds, baths)
+
+        models_dict[model_name] = {}
+        models_dict[model_name]['bedrooms'] = beds
+        models_dict[model_name]['bathrooms'] = baths
+
+        units_sel = 'div.unitGridContainer ul li'
+        units = model.css(units_sel)
+
+        models_dict[model_name]['units'] = {}
+        for unit in units:
+            unit_number = extract_text(unit, 'div.unitColumn button span:nth-child(2)')
+            unit_price = extract_text(unit, 'div.pricingColumn span:nth-child(2)')
+            unit_sqft = extract_text(unit, 'div.sqftColumn span:nth-child(2)')
+            date_available = extract_text(unit, 'div.availableColumn span.dateAvailable')[12:]
+
+            models_dict[model_name]['units'][unit_number] = {
+                'price': unit_price,
+                'sqft': unit_sqft,
+                'date_available': date_available
+            }
+
+    return models_dict
+
+
 def parse_listing(html: HTMLParser) -> dict:
 
+    models = get_models(html)
     fees_and_policies = get_fees_and_policies(html)
     address, zipcode = get_listing_address(html)
 
@@ -130,7 +176,8 @@ def parse_listing(html: HTMLParser) -> dict:
         walk_score=int(extract_text(html, 'div#walkScoreValue')),
         bike_score=int(extract_text(html, 'div.bikeScore div.score')),
         transit_score=int(extract_text(html, 'div.transitScore div.score')),
-        fees_and_policies=fees_and_policies
+        fees_and_policies=fees_and_policies,
+        models=models
     )
     return asdict(listing)
 
@@ -138,7 +185,7 @@ def parse_listing(html: HTMLParser) -> dict:
 def export_to_json(listings):
     with open('listings.json','w', encoding='utf-8') as f:
         json.dump(listings, f, ensure_ascii=False, indent=4)
-
+    print('Exported to JSON')
 
 
 def main():
@@ -155,12 +202,13 @@ def main():
         listings = parse_search_page(html)
 
         for listing in listings:
+            print('got data')
             html = get_html(listing.get('url'))
             data = parse_listing(html)
             data['company'] = listing.get('company')
 
             apartment_list.append(data)
-            time.sleep(.5)
+            time.sleep(.2)
 
     export_to_json(apartment_list)
 
