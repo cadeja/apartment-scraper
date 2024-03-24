@@ -3,11 +3,14 @@ from selectolax.parser import HTMLParser
 import time
 from dataclasses import dataclass, asdict
 
+## SEARCH VARIABLES
+CITY = 'minneapolis'
+STATE = 'mn'
+
 @dataclass
 class Listing:
     name: str
-    neighborhood: str
-    
+    neighborhood: str    
 
 
 def get_html(url: str, **kwargs) -> HTMLParser:
@@ -16,12 +19,20 @@ def get_html(url: str, **kwargs) -> HTMLParser:
     }
     page = kwargs.get('page')
     if page:
-        resp = httpx.get(url + str(page), headers=headers, follow_redirects=True)
+        try:
+            resp = httpx.get(url + str(page), headers=headers, follow_redirects=True)
+            print(resp.status_code)
+        except httpx.HTTPError as err:
+            print(err)
     else:
         resp = httpx.get(url, headers=headers, follow_redirects=True)
     html = HTMLParser(resp.text)
     return html
 
+def get_num_of_pages(html: HTMLParser) -> int:
+    page_range = extract_text(html, 'span.pageRange')
+    last_page = page_range.split(' ')[-1]
+    return int(last_page)
 
 def parse_search_page(html: HTMLParser):
     # yields listing urls
@@ -61,15 +72,22 @@ def parse_listing(html: HTMLParser):
 
 def main():
     
-    baseurl = 'https://www.apartments.com/apartments/minneapolis-mn/max-1-bedrooms/'
-    html = get_html(baseurl, page=1)
+    baseurl = f'https://www.apartments.com/apartments/{CITY}-{STATE}/max-1-bedrooms/'
+
+    num_pages = get_num_of_pages(get_html(baseurl))
+
+    for x in range(1, num_pages + 1):
+        html = get_html(baseurl, page=x)
     
-    # gets url AND company. Company is not easy to get on actual listing
-    listings = parse_search_page(html)
-    for listing in listings:
-        html = get_html(listing.get('url'))
-        print(listing.get('company'), parse_listing(html))
-        time.sleep(.5)
+        # gets url AND company. Company is not easy to get on actual listing
+        listings = parse_search_page(html)
+
+        for listing in listings:
+            html = get_html(listing.get('url'))
+            data = parse_listing(html)
+            data['company'] = listing.get('company')
+            print(data)
+            time.sleep(.5)
 
 if __name__ == '__main__':
     main()
