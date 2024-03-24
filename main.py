@@ -7,10 +7,16 @@ from dataclasses import dataclass, asdict
 CITY = 'minneapolis'
 STATE = 'mn'
 
+
 @dataclass
 class Listing:
     name: str
-    neighborhood: str    
+    neighborhood: str
+    phone_number: str
+    rent_range: str
+    walk_score: int
+    bike_score: int
+    transit_score: int
 
 
 def get_html(url: str, **kwargs) -> HTMLParser:
@@ -29,10 +35,12 @@ def get_html(url: str, **kwargs) -> HTMLParser:
     html = HTMLParser(resp.text)
     return html
 
+
 def get_num_of_pages(html: HTMLParser) -> int:
     page_range = extract_text(html, 'span.pageRange')
     last_page = page_range.split(' ')[-1]
     return int(last_page)
+
 
 def parse_search_page(html: HTMLParser):
     # yields listing urls
@@ -58,16 +66,17 @@ def extract_text(html, sel) -> str:
 
 
 def parse_listing(html: HTMLParser):
-    return {
-        'property_name': extract_text(html, 'h1#propertyName'),
-        'neighborhood': extract_text(html, 'a.neighborhood'),
-        'phone_number': extract_text(html, 'div.phoneNumber span'),
-        'rent_range': extract_text(html, 'p.rentInfoDetail'),
-        'walk_score': extract_text(html, 'div#walkScoreValue'),
-        'bike_score': extract_text(html, 'div.bikeScore div.score'),
-        'transit_score': extract_text(html, 'div.transitScore div.score'),
-        # 'sound_score': extract_text(html, 'div#soundScoreSection div.score') <- requires script
-    }
+
+    listing = Listing(
+        name=extract_text(html, 'h1#propertyName'),
+        neighborhood=extract_text(html, 'a.neighborhood'),
+        phone_number=extract_text(html, 'div.phoneNumber span'),
+        rent_range=extract_text(html, 'p.rentInfoDetail'),
+        walk_score=extract_text(html, 'div#walkScoreValue'),
+        bike_score=extract_text(html, 'div.bikeScore div.score'),
+        transit_score=extract_text(html, 'div.transitScore div.score'),
+    )
+    return asdict(listing)
 
 
 def main():
